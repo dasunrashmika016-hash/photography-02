@@ -25,7 +25,6 @@
 .admin-form label{display:grid;gap:6px;color:#e4d8c0;font-size:12px;text-align:left}
 .admin-form input,.admin-form textarea,.admin-form select{width:100%;padding:11px 12px;border:1px solid #4a3d29;border-radius:6px;background:#11100d;color:#fff;font:14px Arial,sans-serif}
 .admin-form .btn{width:100%;font:inherit}
-.hp-field{position:absolute!important;left:-10000px!important;top:auto!important;width:1px!important;height:1px!important;overflow:hidden!important}
 .form-status{font-size:12px!important;min-height:18px;color:var(--gold2)!important}
 #bookingForm[hidden],#messageForm[hidden]{display:none!important}
 @media(max-width:760px){.admin-form{padding:16px;margin-top:22px}}
@@ -52,7 +51,6 @@
 <label>Session type<select name="session_type" required><option value="">Choose a session</option><option>Wedding</option><option>Pre-shoot</option><option>Birthday</option><option>Event</option><option>Portrait</option><option>Other</option></select></label>
 <label>Preferred date<input name="preferred_date" type="date"></label>
 <label>Notes<textarea name="notes" rows="3" maxlength="3000" placeholder="Venue, timing, or other details"></textarea></label>
-<label class="hp-field" aria-hidden="true">Leave this field empty<input name="website" tabindex="-1" autocomplete="off"></label>
 <button class="btn" type="submit">Send booking request</button><p class="form-status" id="bookingStatus" role="status"></p>
 </form>
 <form class="admin-form" id="messageForm">
@@ -111,52 +109,7 @@ async function submitPublicForm(form,table,statusId,fields){
  finally{submit.disabled=false;}
 }
 document.getElementById('messageForm').addEventListener('submit',e=>{e.preventDefault();submitPublicForm(e.currentTarget,'contact_messages','messageStatus',['name','email','message']);});
-bookingForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  const form = e.currentTarget;
-  const status = document.getElementById('bookingStatus');
-  const submit = form.querySelector('button[type="submit"]');
-
-  if (!db) {
-    status.textContent = 'Setup required: connect Supabase in supabase-config.js before submitting.';
-    return;
-  }
-
-  const values = Object.fromEntries(new FormData(form).entries());
-  if (values.website) {
-    status.textContent = 'Could not send right now. Please contact us directly.';
-    return;
-  }
-
-  submit.disabled = true;
-  status.textContent = 'Sending booking requestâ€¦';
-
-  try {
-    const { data, error } = await db.functions.invoke('booking-email', {
-      body: {
-        name: values.name,
-        email: values.email,
-        session_type: values.session_type,
-        preferred_date: values.preferred_date || null,
-        notes: values.notes || '',
-        website: values.website || ''
-      }
-    });
-
-    if (error) throw error;
-    if (!data || !data.saved) throw new Error('Booking was not saved.');
-
-    form.reset();
-    status.textContent = data.email_sent
-      ? 'Booking request sent successfully. Weâ€™ll contact you soon.'
-      : 'Booking saved, but email notification failed. Please contact us directly.';
-  } catch (err) {
-    console.error('Booking request error:', err);
-    status.textContent = 'Could not confirm your booking request. Please contact us directly before trying again.';
-  } finally {
-    submit.disabled = false;
-  }
-});
+bookingForm.addEventListener('submit',e=>{e.preventDefault();submitPublicForm(e.currentTarget,'booking_requests','bookingStatus',['name','email','session_type','preferred_date','notes']);});
 loadPublicGallery();loadPublicSettings();
 // Reveal sections gently as they enter the viewport.
 const revealItems=document.querySelectorAll('.section');
